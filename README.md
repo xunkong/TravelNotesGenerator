@@ -4,5 +4,5 @@
 
 模仿米游社的旅行者札记生成可用于分享的图片
 
-功能介绍：https://xunkong.cc/release/tool/travelnotesgenerator
+功能介绍：https://xunkong.cc/release/tool/travel-notes-generator
 

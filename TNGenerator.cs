@@ -2,9 +2,10 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net.Http.Json;
-using TravelNotesGenerator.TravelNotes;
-using Xunkong.Core.Wish;
-using Xunkong.Core.XunkongApi;
+using Xunkong.Hoyolab.Account;
+using Xunkong.Hoyolab.TravelNotes;
+using Xunkong.Hoyolab.Wishlog;
+using Xunkong.ApiClient;
 
 namespace TravelNotesGenerator
 {
@@ -13,6 +14,8 @@ namespace TravelNotesGenerator
 
 
         private readonly HttpClient _httpClient;
+
+        private readonly XunkongApiClient _apiClient;
 
 
         Font font_version = new Font("微软雅黑", 28);
@@ -37,7 +40,8 @@ namespace TravelNotesGenerator
         public TNGenerator()
         {
             _httpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All });
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Xunkong.TravelNotesGenerator");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Xunkong.TravelNotesGenerator/0.2.0");
+            _apiClient = new XunkongApiClient(_httpClient);
 
             pendic.Add("活动奖励", pen_huodong);
             pendic.Add("每日奖励", pen_meiri);
@@ -58,24 +62,23 @@ namespace TravelNotesGenerator
 
         private List<WishEventInfo> wishEvents;
 
-        private List<TravelRecordAwardItem> awardItems;
+        private List<TravelNotesAwardItem> awardItems;
 
-        private UserGameRoleInfo user;
+        private GenshinRoleInfo user;
 
 
 
         public async Task GetAssetsAsync()
         {
-            asset = await _httpClient.GetFromJsonAsync("https://file.xunkong.cc/static/travelnotes/asset.json", AssetJsonContext.Default.TravelNoteAsset);
+            asset = await _httpClient.GetFromJsonAsync<TravelNoteAsset>("https://file.xunkong.cc/static/travelnotes/asset.json");
             if (asset is null)
             {
                 throw new NullReferenceException("Asset response is null.");
             }
             bg = asset.Background;
             emos = asset.Emotions;
-            const string url = "https://api.xunkong.cc/v0.1/genshindata/wishevent";
-            var response = await _httpClient.GetFromJsonAsync(url, XunkongJsonContext.Default.ResponseBaseWrapper);
-            wishEvents = response.Data.List;
+            var response = await _apiClient.GetWishEventInfosAsync();
+            wishEvents = response.ToList();
         }
 
 
@@ -106,7 +109,7 @@ namespace TravelNotesGenerator
 
 
 
-        public void SetData(UserGameRoleInfo user, List<TravelRecordAwardItem> awardItems)
+        public void SetData(GenshinRoleInfo user, List<TravelNotesAwardItem> awardItems)
         {
             this.user = user;
             this.awardItems = awardItems;
@@ -138,8 +141,8 @@ namespace TravelNotesGenerator
             var startTime = versionevent.StartTime.UtcDateTime.AddHours(8); ;
             var endtime = versionevent.StartTime.AddDays(42).UtcDateTime.AddHours(8);
             var uid = user.Uid;
-            var rawlist_primo = awardItems.Where(x => x.Uid == uid & x.Type == TravelRecordAwardType.Primogems && x.Time >= startTime && x.Time <= endtime).ToList();
-            var rawlist_mora = awardItems.Where(x => x.Uid == uid & x.Type == TravelRecordAwardType.Mora && x.Time >= startTime && x.Time <= endtime).ToList();
+            var rawlist_primo = awardItems.Where(x => x.Uid == uid & x.Type == TravelNotesAwardType.Primogems && x.Time >= startTime && x.Time <= endtime).ToList();
+            var rawlist_mora = awardItems.Where(x => x.Uid == uid & x.Type == TravelNotesAwardType.Mora && x.Time >= startTime && x.Time <= endtime).ToList();
 
             if (!rawlist_primo.Any() && !rawlist_mora.Any())
             {
